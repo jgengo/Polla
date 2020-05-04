@@ -7,6 +7,26 @@ import (
 	"github.com/slack-go/slack"
 )
 
+func dialogNewPoll(triggerID string) slack.Dialog {
+	dg := slack.NewTextInput("question", "Question", "")
+	dg.MaxLength = 150
+	dg.Placeholder = "Write something"
+	var ddg []slack.DialogElement
+
+	ddg = append(ddg, dg)
+
+	dialog := slack.Dialog{
+		TriggerID:      triggerID,
+		CallbackID:     "abc",
+		Title:          "Add a new Poll",
+		SubmitLabel:    "Create",
+		NotifyOnCancel: true,
+		Elements:       ddg,
+	}
+
+	return dialog
+}
+
 // SlackClient is my slack client
 var SlackClient = slack.New(os.Getenv("TEST_POLLA"))
 
@@ -28,19 +48,8 @@ func ReturnUnauthorized(url string) {
 	slack.PostWebhook(url, resp)
 }
 
-func StartDialog(triggerID, userID string) {
-
-	dg := slack.NewTextInput("test", "test2", "text test")
-	var ddg []slack.DialogElement
-
-	ddg = append(ddg, dg)
-
-	dialog := slack.Dialog{
-		TriggerID:  triggerID,
-		CallbackID: "abc",
-		Title:      "Add a new Poll",
-		Elements:   ddg,
-	}
+func NewPollDialog(triggerID string) {
+	dialog := dialogNewPoll(triggerID)
 	if err := SlackClient.OpenDialog(triggerID, dialog); err != nil {
 		fmt.Printf("err: %+v\n", err)
 	}

@@ -35,10 +35,14 @@ func newPoll(w http.ResponseWriter, req *http.Request) {
 		utils.ReturnUnauthorized(responseURL)
 	}
 
-	utils.StartDialog(triggerID, user)
+	utils.NewPollDialog(triggerID)
 }
 
 func root(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Internal error while Parsing")
+	}
 	fmt.Printf("new call: %+v\n", req)
 }
 
