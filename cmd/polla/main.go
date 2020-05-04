@@ -10,8 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jgengo/Polla/cmd/polla/internal/slackapi"
-	"github.com/nlopes/slack"
+	"github.com/jgengo/Polla/cmd/polla/internal/utils"
 )
 
 func newPoll(w http.ResponseWriter, req *http.Request) {
@@ -23,27 +22,24 @@ func newPoll(w http.ResponseWriter, req *http.Request) {
 
 	text := req.FormValue("text")
 	user := req.FormValue("user_id")
+	triggerID := req.FormValue("trigger_id")
 	responseURL := req.FormValue("response_url")
 
+	fmt.Println(triggerID)
 	fmt.Println(user + " typed /polla " + text)
 	fmt.Println(responseURL)
 
-	isAdmin, err := slackapi.IsAdmin(user)
-	if err != nil {
-		log.Fatalf("error: %v\n", err)
-	}
+	isAdmin, _ := utils.IsAdmin(user)
 
 	if !isAdmin {
-		resp := &slack.WebhookMessage{
-			Text: "Sorry, you are not authorized to use this command",
-		}
-		slack.PostWebhook(responseURL, resp)
+		utils.ReturnUnauthorized(responseURL)
 	}
 
+	utils.StartDialog(triggerID, user)
 }
 
 func root(w http.ResponseWriter, req *http.Request) {
-
+	fmt.Printf("new call: %+v\n", req)
 }
 
 func main() {
