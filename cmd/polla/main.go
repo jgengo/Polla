@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jgengo/Polla/cmd/polla/internal/utils"
+	"github.com/jgengo/Polla/internal/utils"
 )
 
 func newPoll(w http.ResponseWriter, req *http.Request) {
