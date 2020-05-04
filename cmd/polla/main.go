@@ -2,13 +2,45 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/jgengo/Polla/cmd/polla/internal/slackapi"
+	"github.com/nlopes/slack"
 )
+
+func newPoll(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Internal error while Parsing")
+	}
+	fmt.Printf("%+v\n\n\n", req)
+
+	text := req.FormValue("text")
+	user := req.FormValue("user_id")
+	responseURL := req.FormValue("response_url")
+
+	fmt.Println(user + " typed /polla " + text)
+	fmt.Println(responseURL)
+
+	isAdmin, err := slackapi.IsAdmin(user)
+	if err != nil {
+		log.Fatalf("error: %v\n", err)
+	}
+
+	if !isAdmin {
+		resp := &slack.WebhookMessage{
+			Text: "Sorry, you are not authorized to use this command",
+		}
+		slack.PostWebhook(responseURL, resp)
+	}
+
+}
 
 func root(w http.ResponseWriter, req *http.Request) {
 
@@ -22,6 +54,7 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
+	http.HandleFunc("/command", newPoll)
 	http.HandleFunc("/", root)
 
 	go func() {
