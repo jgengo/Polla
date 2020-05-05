@@ -46,24 +46,15 @@ func newPoll(w http.ResponseWriter, req *http.Request) {
 }
 
 func interactivity(w http.ResponseWriter, req *http.Request) {
-	if err := req.ParseForm(); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Internal error while Parsing")
-		return
-	}
-	fmt.Printf("%+v\n\n\n", req)
-
 	var message slack.InteractionCallback
 
 	buf, _ := ioutil.ReadAll(req.Body)
 	jsonStr, err := url.QueryUnescape(string(buf)[8:])
-
 	if err != nil {
 		log.Printf("[ERROR] Failed to unespace request body: %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
 	if err := json.Unmarshal([]byte(jsonStr), &message); err != nil {
 		log.Printf("[ERROR] Failed to decode json message from slack: %s", jsonStr)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -76,9 +67,10 @@ func interactivity(w http.ResponseWriter, req *http.Request) {
 		if message.CallbackID == "new_poll" {
 			utils.SendPoll(channel, content)
 		}
-		if message.CallbackID == "new_answer" {
-			fmt.Printf("=== new Answer\n")
-			fmt.Printf("=== message: %+v\n\n", message.Message)
+		if len(message.CallbackID) > 10 && message.CallbackID[:10] == "new_answer" {
+			ts := message.CallbackID[11:]
+			userID := message.User.ID
+			utils.SendAnswer(ts, content, userID)
 		}
 	}
 
@@ -86,10 +78,9 @@ func interactivity(w http.ResponseWriter, req *http.Request) {
 		actions := message.ActionCallback.BlockActions
 
 		actionID := actions[0].ActionID
-		pollID := actions[0].Value
-		fmt.Printf("\n========> ACTION ID: %s Value: %s\n", actionID, pollID)
+		// pollID := actions[0].Value
 		if actionID == "submit" {
-			utils.NewAnswerDialog(message.TriggerID)
+			utils.NewAnswerDialog(message.TriggerID, message.Message.Timestamp)
 		}
 		if actionID == "show" {
 
