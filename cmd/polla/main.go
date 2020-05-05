@@ -17,31 +17,49 @@ func newPoll(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Internal error while Parsing")
+		return
 	}
 	fmt.Printf("%+v\n\n\n", req)
 
-	text := req.FormValue("text")
+	// text := req.FormValue("text")
 	user := req.FormValue("user_id")
+	channelID := req.FormValue("channel_id")
 	triggerID := req.FormValue("trigger_id")
 	responseURL := req.FormValue("response_url")
 
-	fmt.Println(triggerID)
-	fmt.Println(user + " typed /polla " + text)
-	fmt.Println(responseURL)
-
-	isAdmin, _ := utils.IsAdmin(user)
-
+	isAdmin, err := utils.IsAdmin(user)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Internal error while trying to get user information")
+		return
+	}
 	if !isAdmin {
 		utils.ReturnUnauthorized(responseURL)
 	}
-
 	utils.NewPollDialog(triggerID)
+	go func() {
+		time.Sleep(time.Second * 10)
+		utils.SendPoll(channelID)
+		time.Sleep(time.Second * 5)
+		utils.UpdateLastPoll()
+	}()
+
+}
+
+func interactivity(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Internal error while Parsing")
+		return
+	}
+	fmt.Printf("new interactivity: %+v\n", req)
 }
 
 func root(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Internal error while Parsing")
+		return
 	}
 	fmt.Printf("new call: %+v\n", req)
 }
@@ -54,6 +72,7 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
+	http.HandleFunc("/interactivity", interactivity)
 	http.HandleFunc("/command", newPoll)
 	http.HandleFunc("/", root)
 
