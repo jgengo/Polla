@@ -9,6 +9,7 @@ import (
 
 var database *sql.DB
 
+// Init opens and  creates the database if needed
 func Init() error {
 	database, _ = sql.Open("sqlite3", "./database.db")
 
@@ -19,6 +20,7 @@ func Init() error {
 	return nil
 }
 
+// GenerateText will generate the text for the posted message
 func GenerateText(pollID int64) string {
 	var message string
 	err := database.QueryRow("select message from poll where id = ?", pollID).Scan(&message)
@@ -38,6 +40,7 @@ func GenerateText(pollID int64) string {
 	return message
 }
 
+// GetPoll returns the poll id of a specific ts
 func GetPoll(ts string) (int64, string) {
 	var id int64
 	var channel string
@@ -48,6 +51,7 @@ func GetPoll(ts string) (int64, string) {
 	return id, channel
 }
 
+// AddPoll is to insert a new poll in db
 func AddPoll(message, channel string) (int64, error) {
 	statement, _ := database.Prepare("INSERT INTO poll (message, channel) VALUES (?, ?)")
 	res, _ := statement.Exec(message, channel)
@@ -56,12 +60,14 @@ func AddPoll(message, channel string) (int64, error) {
 	return lastID, nil
 }
 
+// AddAnswer adds new answer in database
 func AddAnswer(pollID int64, content, author string) {
 	statement, _ := database.Prepare("INSERT INTO answer (poll_id, message, author) values (? , ?, ?)")
 	statement.Exec(pollID, content, author)
 	fmt.Printf("added a new answer into databbase\n")
 }
 
+// UpdatePollTS is used to insert th ts after the message has been posted
 func UpdatePollTS(id int64, ts string) {
 	statement, _ := database.Prepare("update poll set ts=? where id=?")
 	statement.Exec(ts, id)
