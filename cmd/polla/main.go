@@ -2,30 +2,34 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/jgengo/Polla/internal/db"
 	"github.com/jgengo/Polla/internal/utils"
+	"github.com/nlopes/slack"
 )
 
 func newPoll(w http.ResponseWriter, req *http.Request) {
-	if err := req.ParseForm(); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Internal error while Parsing")
-		return
-	}
-	fmt.Printf("%+v\n\n\n", req)
+	// if err := req.ParseForm(); err != nil {
+	// 	w.WriteHeader(http.StatusInternalServerError)
+	// 	fmt.Fprintf(w, "Internal error while Parsing")
+	// 	return
+	// }
+	// fmt.Printf("%+v\n\n\n", req)
 
 	// text := req.FormValue("text")
 	user := req.FormValue("user_id")
-	channelID := req.FormValue("channel_id")
 	triggerID := req.FormValue("trigger_id")
-	responseURL := req.FormValue("response_url")
+	// responseURL := req.FormValue("response_url")
 
 	isAdmin, err := utils.IsAdmin(user)
 	if err != nil {
@@ -34,15 +38,10 @@ func newPoll(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if !isAdmin {
-		utils.ReturnUnauthorized(responseURL)
+		fmt.Fprintf(w, "Sorry, you are not authorized to use this command")
+		return
 	}
 	utils.NewPollDialog(triggerID)
-	go func() {
-		time.Sleep(time.Second * 10)
-		utils.SendPoll(channelID)
-		time.Sleep(time.Second * 5)
-		utils.UpdateLastPoll()
-	}()
 
 }
 
@@ -52,7 +51,54 @@ func interactivity(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "Internal error while Parsing")
 		return
 	}
-	fmt.Printf("new interactivity: %+v\n", req)
+	fmt.Printf("%+v\n\n\n", req)
+
+	var message slack.InteractionCallback
+
+	buf, _ := ioutil.ReadAll(req.Body)
+	jsonStr, err := url.QueryUnescape(string(buf)[8:])
+
+	if err != nil {
+		log.Printf("[ERROR] Failed to unespace request body: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.Unmarshal([]byte(jsonStr), &message); err != nil {
+		log.Printf("[ERROR] Failed to decode json message from slack: %s", jsonStr)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if message.Type == "dialog_submission" {
+		channel := message.Channel.GroupConversation.Conversation.ID
+		content := message.Submission["content"]
+		if message.CallbackID == "new_poll" {
+			utils.SendPoll(channel, content)
+		}
+		if message.CallbackID == "new_answer" {
+			fmt.Printf("=== new Answer\n")
+			fmt.Printf("=== message: %+v\n\n", message.Message)
+		}
+	}
+
+	if message.Type == "block_actions" {
+		actions := message.ActionCallback.BlockActions
+
+		actionID := actions[0].ActionID
+		pollID := actions[0].Value
+		fmt.Printf("\n========> ACTION ID: %s Value: %s\n", actionID, pollID)
+		if actionID == "submit" {
+			utils.NewAnswerDialog(message.TriggerID)
+		}
+		if actionID == "show" {
+
+		}
+
+	}
+
+	fmt.Printf("\nmessage: %+v\n", message)
+
 }
 
 func root(w http.ResponseWriter, req *http.Request) {
@@ -65,6 +111,10 @@ func root(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	if err := db.Init(); err != nil {
+		log.Fatalf("failed to init the database")
+	}
+
 	srv := &http.Server{
 		Handler:      nil,
 		Addr:         ":3000",

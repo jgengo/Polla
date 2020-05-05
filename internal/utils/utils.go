@@ -3,15 +3,17 @@ package utils
 import (
 	"fmt"
 	"os"
+	"strconv"
 
+	"github.com/jgengo/Polla/internal/db"
 	"github.com/slack-go/slack"
 )
 
-var lastChannelID string
-var lastTS string
+// var lastChannelID string
+// var lastTS string
 
 func dialogNewPoll(triggerID string) slack.Dialog {
-	dg := slack.NewTextInput("question", "Question", "")
+	dg := slack.NewTextInput("content", "Question", "")
 	dg.MaxLength = 150
 	dg.Placeholder = "Write something"
 	var ddg []slack.DialogElement
@@ -19,19 +21,33 @@ func dialogNewPoll(triggerID string) slack.Dialog {
 	ddg = append(ddg, dg)
 
 	dialog := slack.Dialog{
-		TriggerID:      triggerID,
-		CallbackID:     "abc",
-		Title:          "Add a new Poll",
-		SubmitLabel:    "Create",
-		NotifyOnCancel: true,
-		Elements:       ddg,
+		TriggerID:   triggerID,
+		CallbackID:  "new_poll",
+		Title:       "Add a new Poll",
+		SubmitLabel: "Create",
+		Elements:    ddg,
 	}
 
 	return dialog
 }
 
-func dialogAddAnswer() {
+func dialogNewAnser(triggerID string) slack.Dialog {
+	dg := slack.NewTextInput("content", "Answer", "")
+	dg.MaxLength = 150
+	dg.Placeholder = "Write something"
+	var ddg []slack.DialogElement
 
+	ddg = append(ddg, dg)
+
+	dialog := slack.Dialog{
+		TriggerID:   triggerID,
+		CallbackID:  "new_answer",
+		Title:       "Add a Response",
+		SubmitLabel: "Submit",
+		Elements:    ddg,
+	}
+
+	return dialog
 }
 
 // SlackClient is my slack client
@@ -43,16 +59,7 @@ func IsAdmin(userID string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
 	return user.IsAdmin, nil
-}
-
-// ReturnUnauthorized returns unauthorize via quick-response webhook
-func ReturnUnauthorized(url string) {
-	resp := &slack.WebhookMessage{
-		Text: "Sorry, you are not authorized to use this command",
-	}
-	slack.PostWebhook(url, resp)
 }
 
 // NewPollDialog will send the dialog to add a new poll
@@ -63,12 +70,21 @@ func NewPollDialog(triggerID string) {
 	}
 }
 
-func SendPoll(channelID string) {
-	headerText := slack.NewTextBlockObject("mrkdwn", "Question?", false, false)
+func NewAnswerDialog(triggerID string) {
+	dialog := dialogNewAnser(triggerID)
+	if err := SlackClient.OpenDialog(triggerID, dialog); err != nil {
+		fmt.Printf("err: %+v\n", err)
+	}
+}
+func SendPoll(channelID, question string) {
+	dbID, _ := db.AddPoll(question, channelID)
+	dbIDStr := strconv.FormatInt(dbID, 10)
+
+	headerText := slack.NewTextBlockObject("mrkdwn", question, false, false)
 	headerSection := slack.NewSectionBlock(headerText, nil, nil)
 
 	newBtnTxt := slack.NewTextBlockObject("plain_text", "Submit Response", false, false)
-	newBtn := slack.NewButtonBlockElement("", "click_me_123", newBtnTxt)
+	newBtn := slack.NewButtonBlockElement("submit", dbIDStr, newBtnTxt)
 	actionBlock := slack.NewActionBlock("", newBtn)
 
 	_, ts, err := SlackClient.PostMessage(channelID, slack.MsgOptionText("New Poll started!", false), slack.MsgOptionBlocks(headerSection, actionBlock))
@@ -76,24 +92,22 @@ func SendPoll(channelID string) {
 		fmt.Printf("error pushing: %+v\n", err)
 	}
 
-	lastChannelID = channelID
-	lastTS = ts
+	db.UpdatePollTS(dbID, ts)
 }
 
-func UpdateLastPoll() {
+// func UpdateLastPoll() {
+// 	headerText := slack.NewTextBlockObject("mrkdwn", "Question?\n\n:speech_balloon: When do we eat?", false, false)
+// 	headerSection := slack.NewSectionBlock(headerText, nil, nil)
 
-	headerText := slack.NewTextBlockObject("mrkdwn", "Question?\n\n:speech_balloon: When do we eat?", false, false)
-	headerSection := slack.NewSectionBlock(headerText, nil, nil)
+// 	newBtnTxt := slack.NewTextBlockObject("plain_text", "Submit Response", false, false)
+// 	newBtn := slack.NewButtonBlockElement("", "click_me_123", newBtnTxt)
+// 	actionBlock := slack.NewActionBlock("", newBtn)
 
-	newBtnTxt := slack.NewTextBlockObject("plain_text", "Submit Response", false, false)
-	newBtn := slack.NewButtonBlockElement("", "click_me_123", newBtnTxt)
-	actionBlock := slack.NewActionBlock("", newBtn)
-
-	_, _, _, err := SlackClient.UpdateMessage(lastChannelID, lastTS, slack.MsgOptionText("New Poll started!", false), slack.MsgOptionBlocks(headerSection, actionBlock))
-	if err != nil {
-		fmt.Printf("error updating: %+v\n\n", err)
-	}
-}
+// 	_, _, _, err := SlackClient.UpdateMessage(lastChannelID, lastTS, slack.MsgOptionText("New Poll started!", false), slack.MsgOptionBlocks(headerSection, actionBlock))
+// 	if err != nil {
+// 		fmt.Printf("error updating: %+v\n\n", err)
+// 	}
+// }
 
 /*
 {
