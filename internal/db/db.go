@@ -66,3 +66,8 @@ func UpdatePollTS(id int64, ts string) {
 	statement, _ := database.Prepare("update poll set ts=? where id=?")
 	statement.Exec(ts, id)
 }
+
+// Close can be used to close your database
+func Close() {
+	database.Close()
+}

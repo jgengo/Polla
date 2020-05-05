@@ -9,9 +9,6 @@ import (
 	"github.com/slack-go/slack"
 )
 
-// var lastChannelID string
-// var lastTS string
-
 func dialogNewPoll(triggerID string) slack.Dialog {
 	dg := slack.NewTextInput("content", "Question", "")
 	dg.MaxLength = 150
@@ -70,12 +67,15 @@ func NewPollDialog(triggerID string) {
 	}
 }
 
+// NewAnswerDialog will send the the dialog to answer a poll
 func NewAnswerDialog(triggerID, messageTS string) {
 	dialog := dialogNewAnser(triggerID, messageTS)
 	if err := SlackClient.OpenDialog(triggerID, dialog); err != nil {
 		fmt.Printf("err: %+v\n", err)
 	}
 }
+
+// SendPoll is to create the poll after dialog has been filled.
 func SendPoll(channelID, question string) {
 	dbID, _ := db.AddPoll(question, channelID)
 	dbIDStr := strconv.FormatInt(dbID, 10)
@@ -97,6 +97,7 @@ func SendPoll(channelID, question string) {
 	db.UpdatePollTS(dbID, ts)
 }
 
+// SendAnswer inserts and process a new answer
 func SendAnswer(ts, content, userID string) {
 	pollID, channelID := db.GetPoll(ts)
 	dbIDStr := strconv.FormatInt(pollID, 10)
@@ -115,38 +116,3 @@ func SendAnswer(ts, content, userID string) {
 		fmt.Printf("error updating: %+v\n\n", err)
 	}
 }
-
-// func UpdateLastPoll() {
-// 	headerText := slack.NewTextBlockObject("mrkdwn", "Question?\n\n:speech_balloon: When do we eat?", false, false)
-// 	headerSection := slack.NewSectionBlock(headerText, nil, nil)
-
-// 	newBtnTxt := slack.NewTextBlockObject("plain_text", "Submit Response", false, false)
-// 	newBtn := slack.NewButtonBlockElement("", "click_me_123", newBtnTxt)
-// 	actionBlock := slack.NewActionBlock("", newBtn)
-
-// }
-
-/*
-{
-	"blocks": [
-		{
-			"type": "section",
-			"text": {"type": "mrkdwn", "text": "Question\n\n" }
-		},
-		{
-			"type": "actions",
-			"elements": [
-				{
-					"type": "button",
-					"text": {
-						"type": "plain_text",
-						"text": "Submit Response",
-						"emoji": true
-					},
-					"value": "click_me_123"
-				}
-			]
-		}
-	]
-}
-*/

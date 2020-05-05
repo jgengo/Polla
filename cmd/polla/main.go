@@ -137,6 +137,8 @@ func waitForShutdown(srv *http.Server) {
 	defer cancel()
 	srv.Shutdown(ctx)
 
+	db.Close()
+
 	log.Println("Shutting down")
 	os.Exit(0)
 
