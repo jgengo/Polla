@@ -15,24 +15,26 @@ import (
 
 	"github.com/jgengo/Polla/internal/db"
 	"github.com/jgengo/Polla/internal/utils"
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 )
 
 func newPoll(w http.ResponseWriter, req *http.Request) {
-	// if err := req.ParseForm(); err != nil {
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	fmt.Fprintf(w, "Internal error while Parsing")
-	// 	return
-	// }
-	// fmt.Printf("%+v\n\n\n", req)
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Internal error while Parsing")
+		return
+	}
+	fmt.Printf("%+v\n\n\n", req)
 
-	// text := req.FormValue("text")
 	user := req.FormValue("user_id")
+	fmt.Println("user", user)
 	triggerID := req.FormValue("trigger_id")
+	fmt.Println("triggerID", triggerID)
 	// responseURL := req.FormValue("response_url")
 
 	isAdmin, err := utils.IsAdmin(user)
 	if err != nil {
+		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Internal error while trying to get user information")
 		return
@@ -69,7 +71,7 @@ func interactivity(w http.ResponseWriter, req *http.Request) {
 		}
 		if len(message.CallbackID) > 10 && message.CallbackID[:10] == "new_answer" {
 			ts := message.CallbackID[11:]
-			userID := message.User.ID
+			userID := message.User.Name
 			utils.SendAnswer(ts, content, userID)
 		}
 	}
@@ -82,8 +84,8 @@ func interactivity(w http.ResponseWriter, req *http.Request) {
 		if actionID == "submit" {
 			utils.NewAnswerDialog(message.TriggerID, message.Message.Timestamp)
 		}
-		if actionID == "show" {
-
+		if actionID == "result" {
+			utils.ShowResults(message.User.ID, message.Message.Timestamp)
 		}
 
 	}

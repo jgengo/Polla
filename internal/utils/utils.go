@@ -75,6 +75,17 @@ func NewAnswerDialog(triggerID, messageTS string) {
 	}
 }
 
+func ShowResults(userID, ts string) {
+	pollID, channelID := db.GetPoll(ts)
+	isAdmin, _ := IsAdmin(userID)
+
+	txt := db.GenerateResult(pollID, isAdmin)
+
+	params := slack.PostMessageParameters{}
+	params.LinkNames = 1
+	SlackClient.PostEphemeral(channelID, userID, slack.MsgOptionText(txt, false), slack.MsgOptionPostMessageParameters(params))
+}
+
 // SendPoll is to create the poll after dialog has been filled.
 func SendPoll(channelID, question string) {
 	dbID, _ := db.AddPoll(question, channelID)
@@ -110,7 +121,10 @@ func SendAnswer(ts, content, userID string) {
 
 	newBtnTxt := slack.NewTextBlockObject("plain_text", "Submit Response", false, false)
 	newBtn := slack.NewButtonBlockElement("submit", dbIDStr, newBtnTxt)
-	actionBlock := slack.NewActionBlock("", newBtn)
+
+	resultBtnTxt := slack.NewTextBlockObject("plain_text", "Results", false, false)
+	resultBtn := slack.NewButtonBlockElement("result", dbIDStr, resultBtnTxt)
+	actionBlock := slack.NewActionBlock("", newBtn, resultBtn)
 	_, _, _, err := SlackClient.UpdateMessage(channelID, ts, slack.MsgOptionText("New Poll started!", false), slack.MsgOptionBlocks(headerSection, actionBlock))
 	if err != nil {
 		fmt.Printf("error updating: %+v\n\n", err)

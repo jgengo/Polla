@@ -40,6 +40,24 @@ func GenerateText(pollID int64) string {
 	return message
 }
 
+func GenerateResult(pollID int64, isAdmin bool) string {
+	var message string
+
+	var res string
+	var user string
+	rows, _ := database.Query("select message, author from answer where poll_id = ?", pollID)
+	for rows.Next() {
+		rows.Scan(&res, &user)
+		if isAdmin {
+			message += fmt.Sprintf(":speech_balloon:  %s -- @%s\n", res, user)
+		} else {
+			message += fmt.Sprintf(":speech_balloon:  %s\n", res)
+		}
+	}
+
+	return message
+}
+
 // GetPoll returns the poll id of a specific ts
 func GetPoll(ts string) (int64, string) {
 	var id int64
