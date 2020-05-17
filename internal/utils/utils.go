@@ -75,6 +75,7 @@ func NewAnswerDialog(triggerID, messageTS string) {
 	}
 }
 
+// ShowResults displays the results
 func ShowResults(userID, ts string) {
 	pollID, channelID := db.GetPoll(ts)
 	isAdmin, _ := IsAdmin(userID)
@@ -98,12 +99,15 @@ func SendPoll(channelID, question string) {
 	newBtn := slack.NewButtonBlockElement("submit", dbIDStr, newBtnTxt)
 	actionBlock := slack.NewActionBlock("", newBtn)
 
-	_, ts, err := SlackClient.PostMessage(channelID, slack.MsgOptionText("New Poll started!", false), slack.MsgOptionBlocks(headerSection, actionBlock))
+	_, ts, err := SlackClient.PostMessage(
+		channelID,
+		slack.MsgOptionText("New Poll started!", false),
+		slack.MsgOptionBlocks(headerSection, actionBlock),
+	)
 	if err != nil {
-		fmt.Printf("error pushing: %+v\n", err)
+		fmt.Printf("error sending poll: %s\n", err)
+		return
 	}
-
-	fmt.Printf("== message TS: %s\n", ts)
 
 	db.UpdatePollTS(dbID, ts)
 }
@@ -125,8 +129,15 @@ func SendAnswer(ts, content, userID string) {
 	resultBtnTxt := slack.NewTextBlockObject("plain_text", "Results", false, false)
 	resultBtn := slack.NewButtonBlockElement("result", dbIDStr, resultBtnTxt)
 	actionBlock := slack.NewActionBlock("", newBtn, resultBtn)
-	_, _, _, err := SlackClient.UpdateMessage(channelID, ts, slack.MsgOptionText("New Poll started!", false), slack.MsgOptionBlocks(headerSection, actionBlock))
+
+	_, _, _, err := SlackClient.UpdateMessage(
+		channelID,
+		ts,
+		slack.MsgOptionText("New Poll started!", false),
+		slack.MsgOptionBlocks(headerSection, actionBlock),
+	)
 	if err != nil {
-		fmt.Printf("error updating: %+v\n\n", err)
+		fmt.Printf("error updating message: %s\n", err)
+		return
 	}
 }
