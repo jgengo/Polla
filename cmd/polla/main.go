@@ -18,23 +18,24 @@ import (
 	"github.com/slack-go/slack"
 )
 
-func newPoll(w http.ResponseWriter, req *http.Request) {
+func command(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Internal error while Parsing")
 		return
 	}
-	fmt.Printf("%+v\n\n\n", req)
 
 	user := req.FormValue("user_id")
-	fmt.Println("user", user)
 	triggerID := req.FormValue("trigger_id")
-	fmt.Println("triggerID", triggerID)
-	// responseURL := req.FormValue("response_url")
 
 	isAdmin, err := utils.IsAdmin(user)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("[error] failed to check if user is admin: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Internal error while trying to get user information")
 		return
@@ -44,21 +45,25 @@ func newPoll(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	utils.NewPollDialog(triggerID)
-
 }
 
 func interactivity(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	var message slack.InteractionCallback
 
 	buf, _ := ioutil.ReadAll(req.Body)
 	jsonStr, err := url.QueryUnescape(string(buf)[8:])
 	if err != nil {
-		log.Printf("[ERROR] Failed to unespace request body: %s", err)
+		log.Printf("[error] failed to unespace request body: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &message); err != nil {
-		log.Printf("[ERROR] Failed to decode json message from slack: %s", jsonStr)
+		log.Printf("[error] failed to decode json message from slack: %s\n", jsonStr)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -80,27 +85,13 @@ func interactivity(w http.ResponseWriter, req *http.Request) {
 		actions := message.ActionCallback.BlockActions
 
 		actionID := actions[0].ActionID
-		// pollID := actions[0].Value
 		if actionID == "submit" {
 			utils.NewAnswerDialog(message.TriggerID, message.Message.Timestamp)
 		}
 		if actionID == "result" {
 			utils.ShowResults(message.User.ID, message.Message.Timestamp)
 		}
-
 	}
-
-	fmt.Printf("\nmessage: %+v\n", message)
-
-}
-
-func root(w http.ResponseWriter, req *http.Request) {
-	if err := req.ParseForm(); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Internal error while Parsing")
-		return
-	}
-	fmt.Printf("new call: %+v\n", req)
 }
 
 func main() {
@@ -116,8 +107,7 @@ func main() {
 	}
 
 	http.HandleFunc("/interactivity", interactivity)
-	http.HandleFunc("/command", newPoll)
-	http.HandleFunc("/", root)
+	http.HandleFunc("/command", command)
 
 	go func() {
 		log.Println("Starting Server")
