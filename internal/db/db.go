@@ -49,7 +49,7 @@ func GenerateResult(pollID int64, isAdmin bool) string {
 	for rows.Next() {
 		rows.Scan(&res, &user)
 		if isAdmin {
-			message += fmt.Sprintf(":speech_balloon:  %s -- @%s\n", res, user)
+			message += fmt.Sprintf(":speech_balloon:  %s (@%s)\n", res, user)
 		} else {
 			message += fmt.Sprintf(":speech_balloon:  %s\n", res)
 		}
@@ -74,7 +74,6 @@ func AddPoll(message, channel string) (int64, error) {
 	statement, _ := database.Prepare("INSERT INTO poll (message, channel) VALUES (?, ?)")
 	res, _ := statement.Exec(message, channel)
 	lastID, _ := res.LastInsertId()
-	fmt.Printf("=== lastID: %d", lastID)
 	return lastID, nil
 }
 
