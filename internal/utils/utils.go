@@ -48,7 +48,7 @@ func dialogNewAnser(triggerID, messageTS string) slack.Dialog {
 }
 
 // SlackClient is my slack client
-var SlackClient = slack.New(os.Getenv("TEST_POLLA"))
+var SlackClient = slack.New(os.Getenv("SLACK_TOKEN"))
 
 // IsAdmin returns if a specified user is admin or not
 func IsAdmin(userID string) (bool, error) {

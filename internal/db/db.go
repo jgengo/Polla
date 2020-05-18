@@ -11,7 +11,7 @@ var database *sql.DB
 
 // Init opens and  creates the database if needed
 func Init() error {
-	database, _ = sql.Open("sqlite3", "./database.db")
+	database, _ = sql.Open("sqlite3", "./db/database.db")
 
 	statement, _ := database.Prepare("CREATE TABLE IF NOT EXISTS poll (id INTEGER PRIMARY KEY, message TEXT, ts TEXT, channel TEXT)")
 	statement.Exec()

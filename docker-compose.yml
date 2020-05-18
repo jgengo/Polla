@@ -1,0 +1,16 @@
+version: "3.5"
+
+services:
+    polla:
+        image: polla
+        build: .
+        container_name: polla
+        ports:
+            - '3000:3000'
+        volumes:
+            - "dbdata:/db"
+        env_file:
+            - '.env' 
+
+volumes:
+    dbdata:
