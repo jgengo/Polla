@@ -12,7 +12,8 @@ import (
 	"github.com/slack-go/slack"
 )
 
-func command(w http.ResponseWriter, req *http.Request) {
+// Command receives and handles the slack commands
+func Command(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -41,7 +42,8 @@ func command(w http.ResponseWriter, req *http.Request) {
 	utils.NewPollDialog(triggerID)
 }
 
-func interactivity(w http.ResponseWriter, req *http.Request) {
+// Interactivity receives and handles the slack interactivities
+func Interactivity(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotFound)
 		return
