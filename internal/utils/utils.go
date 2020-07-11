@@ -31,7 +31,7 @@ func dialogNewPoll(triggerID string) slack.Dialog {
 func dialogNewAnser(triggerID, messageTS string) slack.Dialog {
 	// dg := slack.NewTextInput("content", "Answer", "")
 	dg := slack.NewTextAreaInput("content", "Answer", "")
-	dg.MaxLength = 1000
+	dg.MaxLength = 500
 	dg.MinLength = 50
 	dg.Placeholder = "Write something"
 	var ddg []slack.DialogElement
@@ -121,6 +121,10 @@ func SendAnswer(ts, content, userID string) {
 
 	db.AddAnswer(pollID, content, userID)
 	newTxt := db.GenerateText(pollID)
+
+	if len(newTxt) > 2000 {
+		newTxt = newTxt[0:2000] + "..."
+	}
 
 	headerText := slack.NewTextBlockObject("mrkdwn", newTxt, false, false)
 	headerSection := slack.NewSectionBlock(headerText, nil, nil)
