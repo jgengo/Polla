@@ -31,6 +31,8 @@ func dialogNewPoll(triggerID string) slack.Dialog {
 func dialogNewAnser(triggerID, messageTS string) slack.Dialog {
 	// dg := slack.NewTextInput("content", "Answer", "")
 	dg := slack.NewTextAreaInput("content", "Answer", "")
+	dg.MaxLength = 1000
+	dg.MinLength = 50
 	dg.Placeholder = "Write something"
 	var ddg []slack.DialogElement
 
