@@ -4,5 +4,6 @@ go 1.14
 
 require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
-	github.com/slack-go/slack v0.6.4
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/slack-go/slack v0.7.2
 )
